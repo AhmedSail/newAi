@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { Card } from "@/components/ui/card";
 import React from "react";
 import SignUpView from "@/src/modules/auth/ui/view/signUpView";

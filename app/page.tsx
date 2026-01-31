@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { auth } from "@/lib/auth";
 import HomeView from "@/src/modules/home/ui/view/home-view";
 import { headers } from "next/headers";
