@@ -18,6 +18,11 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  baseURL:
+    process.env.BETTER_AUTH_URL ||
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000"),
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
   },
@@ -25,5 +30,8 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://172.16.4.26:3000",
-  ],
+    process.env.BETTER_AUTH_URL as string,
+    process.env.NEXT_PUBLIC_APP_URL as string,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
+  ].filter(Boolean),
 });
