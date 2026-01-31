@@ -45,7 +45,7 @@ export default function SignInView() {
           setPending(false);
           setError(error?.message ?? "Unexpected error");
         },
-      }
+      },
     );
   };
   const onSocial = async (provider: "github" | "google") => {
@@ -65,7 +65,7 @@ export default function SignInView() {
           setPending(false);
           setError(error?.message ?? "Unexpected error");
         },
-      }
+      },
     );
   };
   const form = useForm<z.infer<typeof formSchema>>({
@@ -145,26 +145,15 @@ export default function SignInView() {
                     Or Continue with
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    onClick={() => onSocial("google")}
-                    variant={"outline"}
-                    type="button"
-                    className="w-full"
-                  >
-                    <FaGoogle />
-                    Google
-                  </Button>
-                  <Button
-                    onClick={() => onSocial("github")}
-                    variant={"outline"}
-                    type="button"
-                    className="w-full"
-                  >
-                    <FaGithub />
-                    Github
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => onSocial("google")}
+                  variant={"outline"}
+                  type="button"
+                  className="w-full"
+                >
+                  <FaGoogle />
+                  Google
+                </Button>
                 <div className="text-center text-muted-foreground">
                   {" "}
                   Don&apos;t have an account ?{" "}
