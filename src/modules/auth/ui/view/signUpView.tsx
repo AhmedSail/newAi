@@ -250,17 +250,13 @@ export default function SignUpView() {
           <div className="relative hidden md:flex flex-col gap-y-4 items-center justify-center p-8 bg-gradient-to-br from-cyan-900 via-zinc-900 to-black text-white">
             <div className="absolute inset-0 bg-black/20" />
             <div className="relative z-10 flex flex-col items-center gap-4">
-              <div className="flex flex-col">
-                <span className="text-xl font-black italic tracking-tighter text-white uppercase sm:text-2xl">
-                  VEO <span className="text-cyan-400 italic">STUDIO</span>
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                    Google Veo Engine
-                  </span>
-                </div>
-              </div>
+              <Image
+                src="/logo.png"
+                alt="Veo AI Logo"
+                width={500}
+                height={500}
+                className="w-[500px] h-auto drop-shadow-2xl hover:scale-105 transition-transform duration-500"
+              />
             </div>
           </div>
         </CardContent>
