@@ -81,6 +81,42 @@ export function VideoForm({ onSuccess }: { onSuccess: (video?: any) => void }) {
     },
   });
 
+  const videoLength = form.watch("videoLength");
+  const model = form.watch("model");
+  const generateAudio = form.watch("generateAudio");
+
+  const resolution = form.watch("resolution");
+
+  const calculateCost = () => {
+    let baseCost = 0;
+    const isFast = model.includes("fast");
+    const secondsInt = parseInt(videoLength || "4");
+
+    if (isFast) {
+      baseCost = 50; // Fast model
+    } else {
+      baseCost = 80; // Standard model
+    }
+
+    if (generateAudio) {
+      baseCost += 20;
+    }
+
+    // Quality adjustments
+    if (resolution === "480p") {
+      baseCost -= 10;
+    } else if (resolution === "1080p") {
+      baseCost += 20;
+    }
+
+    if (secondsInt > 5) {
+      baseCost *= 2;
+    }
+    return baseCost;
+  };
+
+  const estimatedCost = calculateCost();
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -546,6 +582,9 @@ export function VideoForm({ onSuccess }: { onSuccess: (video?: any) => void }) {
               <div className="flex items-center gap-3">
                 <Zap className="w-5 h-5 fill-black" />
                 <span>GENERATE VIDEO</span>
+                <span className="ml-2 text-xs font-normal opacity-60">
+                  ({estimatedCost} Credits)
+                </span>
               </div>
             )}
           </Button>

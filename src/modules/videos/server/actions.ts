@@ -2,8 +2,9 @@
 
 import { db } from "../../../index";
 import { videos } from "../../../db/schema";
+import * as schema from "../../../db/schema";
 import { auth } from "../../../../lib/auth";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as crypto from "crypto";
@@ -74,8 +75,71 @@ export async function createVideoAction(formData: FormData) {
   const model = (formData.get("model") as string) || "veo-3";
   const seconds = (formData.get("seconds") as string) || "5";
   const size = (formData.get("size") as string) || "1280x720";
+  const resolution = (formData.get("resolution") as string) || "720p";
 
   const videoId = `vid_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  const secondsInt = parseInt(seconds) || 5;
+  const generateAudio = formData.get("generateAudio") === "true";
+
+  // Cost Calculation Logic - Profitability Adjustment
+  // Veo 3.1 costs ~$2.00 per 5s generation (Standard)
+  // Subscription is $30 for 1000 credits.
+  // To break even/profit, 1000 credits should yield ~10-14 videos.
+  // Therefore, 1 video should cost ~70-100 credits.
+
+  let baseCost = 0;
+  const isFast = model.includes("fast");
+
+  if (isFast) {
+    baseCost = 50; // Fast model: ~50 credits
+  } else {
+    baseCost = 80; // Standard model: ~80 credits
+  }
+
+  // Audio adds significant processing cost
+  if (generateAudio) {
+    baseCost += 20;
+  }
+
+  // Quality adjustments
+  if (resolution === "480p") {
+    baseCost -= 10;
+  } else if (resolution === "1080p") {
+    baseCost += 20;
+  }
+
+  // Double cost if duration is > 5 seconds
+  if (secondsInt > 5) {
+    baseCost *= 2;
+  }
+
+  const cost = baseCost;
+
+  // Check user credits
+  // BYPASS for Admin User
+  if (session.user.id !== process.env.AdminID) {
+    const [currentUser] = await db
+      .select({ credits: schema.user.credits }) // Using schema namespace from imports if available or need to يimport user
+      .from(schema.user)
+      .where(eq(schema.user.id, session.user.id));
+
+    // Since 'user' table export might be different, let's look at imports.
+    // Import 'user' from schema was not explicit in top of file.
+    // I need to add 'user' to imports.
+
+    if (!currentUser || (currentUser.credits || 0) < cost) {
+      throw new Error(
+        `Insufficient credits. Required: ${cost}, Available: ${currentUser?.credits || 0}`,
+      );
+    }
+
+    // Deduct credits
+    await db
+      .update(schema.user)
+      .set({ credits: sql`${schema.user.credits} - ${cost}` })
+      .where(eq(schema.user.id, session.user.id));
+  }
 
   try {
     // Create the video record
