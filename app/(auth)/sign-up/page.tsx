@@ -6,6 +6,13 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "إنشاء حساب",
+  description: "انضم إلى Veo AI وابدأ في صناعة الفيديوهات بالذكاء الاصطناعي.",
+};
+
 const Signup = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),

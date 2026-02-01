@@ -8,6 +8,7 @@ import { syncVideosStatusBatchAction } from "../../server/batch-actions";
 import { getUserCreditsAction } from "@/src/modules/users/server/actions";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Sparkles,
   Video,
@@ -160,21 +161,13 @@ export default function VideosView() {
               onClick={() => router.push("/")}
             >
               <div className="relative">
-                <div className="absolute -inset-1 rounded-2xl bg-linear-to-r from-cyan-400 via-blue-500 to-cyan-600 opacity-75 blur-sm group-hover:opacity-100 transition duration-500 group-hover:duration-200" />
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-black leading-none ring-1 ring-white/10 group-hover:ring-white/20 transition-all">
-                  <Waves className="h-6 w-6 text-cyan-400 animate-wave" />
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-black italic tracking-tighter text-white uppercase sm:text-2xl">
-                  VEO <span className="text-cyan-400 italic">STUDIO</span>
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                    Google Veo Engine
-                  </span>
-                </div>
+                <Image
+                  src="/logo.png"
+                  alt="Veo AI Logo"
+                  width={150}
+                  height={150}
+                  className="w-[150px] h-auto drop-shadow-2xl hover:scale-105 transition-transform duration-500"
+                />
               </div>
             </div>
 
@@ -361,7 +354,7 @@ export default function VideosView() {
                 <div className="flex items-center gap-5">
                   <div className="h-10 w-2 bg-cyan-500 rounded-full shadow-[0_0_15px_rgba(34,211,238,1)]" />
                   <h2 className="text-5xl font-black tracking-tighter text-white leading-none italic uppercase">
-                    Studio <span className="text-cyan-500">Vault</span>
+                    Studio
                   </h2>
                 </div>
                 <p className="text-sm font-bold text-zinc-600 mr-12 tracking-wide">
