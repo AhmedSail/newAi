@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { VideoForm } from "../components/video-form";
 import { VideoList } from "../components/video-list";
 import { getVideosAction, syncVideoStatusAction } from "../../server/actions";
+import { syncVideosStatusBatchAction } from "../../server/batch-actions";
+import { getUserCreditsAction } from "@/src/modules/users/server/actions";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import {
@@ -19,6 +21,8 @@ import {
   Bell,
   Search,
   Waves,
+  Coins,
+  Crown,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -35,7 +39,18 @@ import { Input } from "@/components/ui/input";
 export default function VideosView() {
   const router = useRouter();
   const [videos, setVideos] = useState<any[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
+  const [credits, setCredits] = useState<number | null>(null);
+
+  const fetchCredits = async () => {
+    try {
+      const userCredits = await getUserCreditsAction();
+      setCredits(userCredits);
+    } catch (error) {
+      console.error("Error fetching credits:", error);
+    }
+  };
 
   const fetchVideos = async () => {
     try {
@@ -49,6 +64,7 @@ export default function VideosView() {
   };
 
   const handleVideoSuccess = (newVideo?: any) => {
+    fetchCredits(); // Refresh credits after generation
     if (newVideo) {
       // Add new video to top of list instantly
       setVideos((prev) => [newVideo, ...prev]);
@@ -59,43 +75,64 @@ export default function VideosView() {
 
   useEffect(() => {
     fetchVideos();
+    fetchCredits();
   }, []);
 
-  // Polling logic for "processing" videos
+  // Bulk Polling Logic (Smart & Efficient)
   useEffect(() => {
-    const processingVideos = videos.filter((v) => v.status === "processing");
+    // Only poll if there are actually videos processing
+    const processingVideoIds = videos
+      .filter((v) => v.status === "processing")
+      .map((v) => v.id);
 
-    if (processingVideos.length === 0) return;
+    if (processingVideoIds.length === 0) return;
 
+    // Use a longer interval to be kind to the server (e.g., 5 seconds)
     const interval = setInterval(async () => {
-      let hasUpdates = false;
-      const updatedVideos = [...videos];
+      try {
+        console.log(
+          "[Smart Poll] Checking status for:",
+          processingVideoIds.length,
+          "videos",
+        );
 
-      for (let i = 0; i < updatedVideos.length; i++) {
-        if (updatedVideos[i].status === "processing") {
-          try {
-            const updated = await syncVideoStatusAction(updatedVideos[i].id);
-            if (
-              updated &&
-              (updated.status !== updatedVideos[i].status ||
-                updated.progress !== updatedVideos[i].progress)
-            ) {
-              updatedVideos[i] = updated;
-              hasUpdates = true;
-            }
-          } catch (err) {
-            console.error("Polling error for video:", updatedVideos[i].id, err);
-          }
+        // ONE request for ALL videos
+        const updatedList =
+          await syncVideosStatusBatchAction(processingVideoIds);
+
+        if (updatedList && updatedList.length > 0) {
+          setVideos((prevVideos) => {
+            const newVideos = [...prevVideos];
+            let changed = false;
+
+            updatedList.forEach((updatedVideo) => {
+              if (!updatedVideo) return; // Skip if null/undefined
+              const index = newVideos.findIndex(
+                (v) => v.id === updatedVideo.id,
+              );
+              if (index !== -1) {
+                // Only update if something actually changed
+                if (
+                  newVideos[index].status !== updatedVideo.status ||
+                  newVideos[index].progress !== updatedVideo.progress ||
+                  newVideos[index].videoUrl !== updatedVideo.videoUrl
+                ) {
+                  newVideos[index] = updatedVideo;
+                  changed = true;
+                }
+              }
+            });
+
+            return changed ? newVideos : prevVideos;
+          });
         }
+      } catch (err) {
+        console.error("Batch polling error:", err);
       }
-
-      if (hasUpdates) {
-        setVideos(updatedVideos);
-      }
-    }, 3000); // Fast Polling every 3 seconds for Real-time feel
+    }, 5000); // 5 Seconds Interval (Much better than 3s per video)
 
     return () => clearInterval(interval);
-  }, [videos]);
+  }, [videos]); // Re-run effect when videos list changes (e.g. status updates)
 
   return (
     <div
@@ -141,48 +178,68 @@ export default function VideosView() {
               </div>
             </div>
 
+            {/* Credits Display */}
+            {credits !== null && (
+              <div className="hidden lg:flex items-center gap-4 bg-zinc-900/50 border border-white/5 rounded-full px-5 py-2 ml-8">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-bold text-white tabular-nums">
+                    {credits}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                    Credits
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-white/10" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-auto p-0 text-[10px] font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300 hover:bg-transparent"
+                  onClick={() => router.push("/pricing")}
+                >
+                  Get More
+                </Button>
+              </div>
+            )}
+
             {/* Nav Links */}
             <nav className="hidden xl:flex items-center gap-2 ml-10">
-              {[
-                { label: "الاستوديو", icon: Wand2, active: true },
-                { label: "الأرشيف", icon: Film, active: false },
-                { label: "الإحصائيات", icon: Zap, active: false },
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  className={`flex items-center gap-3 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 border ${
-                    item.active
-                      ? "bg-cyan-500/10 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.1)] border-cyan-500/20 italic"
-                      : "text-zinc-500 hover:text-white hover:bg-white/5 border-transparent"
-                  }`}
-                >
-                  <item.icon
-                    className={`h-4 w-4 ${item.active ? "text-cyan-400" : ""}`}
-                  />
-                  {item.label}
-                </button>
-              ))}
+              {[{ label: "الاستوديو", icon: Wand2, active: true }].map(
+                (item) => (
+                  <button
+                    key={item.label}
+                    className={`flex items-center gap-3 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 border ${
+                      item.active
+                        ? "bg-cyan-500/10 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.1)] border-cyan-500/20 italic"
+                        : "text-zinc-500 hover:text-white hover:bg-white/5 border-transparent"
+                    }`}
+                  >
+                    <item.icon
+                      className={`h-4 w-4 ${item.active ? "text-cyan-400" : ""}`}
+                    />
+                    {item.label}
+                  </button>
+                ),
+              )}
             </nav>
           </div>
 
           {/* Top Actions */}
           <div className="flex items-center gap-3 lg:gap-8">
-            <div className="hidden md:flex relative group h-11">
-              <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                <Search className="h-4 w-4 text-zinc-600 group-focus-within:text-cyan-400 transition-colors" />
-              </div>
-              <Input
-                className="h-full w-64 md:w-96 bg-black border-white/5 rounded-2xl pr-11 focus-visible:ring-cyan-500/20 focus-visible:border-cyan-500/40 transition-all text-sm font-bold text-white placeholder:text-zinc-700"
-                placeholder="ابحث في إبداعاتك..."
-              />
-            </div>
-
             <Button
               variant="ghost"
               size="icon"
               className="h-11 w-11 rounded-2xl hover:bg-white/5 text-zinc-500 hover:text-cyan-400 transition-all"
             >
               <Bell className="h-5 w-5" />
+            </Button>
+
+            <Button
+              className="hidden sm:flex bg-linear-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0 shadow-[0_0_20px_rgba(245,158,11,0.2)] rounded-xl font-bold uppercase tracking-widest text-[10px] h-11 px-6 items-center gap-2"
+              onClick={() => router.push("/pricing")}
+            >
+              <Crown className="h-4 w-4" />
+              <span>Upgrade</span>
             </Button>
 
             <div className="h-8 w-px bg-white/10 mx-1 hidden sm:block" />
@@ -319,12 +376,6 @@ export default function VideosView() {
                 <div className="flex items-center bg-black border border-white/5 rounded-2xl p-1.5 shadow-2xl">
                   <button className="px-7 py-3 text-[10px] font-black uppercase tracking-widest text-white bg-cyan-500/20 rounded-[14px] border border-cyan-500/30 italic">
                     الجميع
-                  </button>
-                  <button className="px-7 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-all">
-                    Processing
-                  </button>
-                  <button className="px-7 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-all">
-                    Ready
                   </button>
                 </div>
                 <div className="h-12 px-6 flex items-center bg-black border border-white/5 rounded-2xl shadow-inner group/count">

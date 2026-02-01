@@ -16,6 +16,8 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  credits: integer("credits").default(5).notNull(),
+  lemonSqueezyCustomerId: text("lemon_squeezy_customer_id"),
 });
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
@@ -78,4 +80,25 @@ export const videos = pgTable("videos", {
   completedAt: timestamp("completed_at"),
   videoUrl: text("video_url"),
   vertexOperationName: text("vertex_operation_name"),
+});
+
+export const subscriptions = pgTable("subscriptions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  status: text("status").notNull(), // 'active', 'cancelled', etc.
+  variantId: text("variant_id").notNull(),
+  lemonSqueezyId: text("lemon_squeezy_id").unique().notNull(),
+  orderId: integer("order_id"),
+  subscriptionId: text("subscription_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const webhookEvents = pgTable("webhook_events", {
+  id: text("id").primaryKey(),
+  eventName: text("event_name").notNull(),
+  payload: text("payload").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
